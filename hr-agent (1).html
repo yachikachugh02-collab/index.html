@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HR Ops Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700;800&family=DM+Sans:wght@300;400;500&display=swap"/>
+<style>
+:root {
+  --bg: #0b0d0f;
+  --surface: #111416;
+  --card: #161a1d;
+  --border: rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.15);
+  --accent: #00e5a0;
+  --accent2: #4f8eff;
+  --accent3: #ff6b6b;
+  --accent4: #ffc94a;
+  --text: #e8eaed;
+  --muted: #6b7280;
+  --muted2: #9ca3af;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --display: 'Syne', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;overflow:hidden}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:56px 1fr;height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar-logo{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-0.5px;color:var(--text)}
+.topbar-logo span{color:var(--accent)}
+.topbar-badge{font-family:var(--mono);font-size:10px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:2px 7px;letter-spacing:0.05em}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.status-label{font-family:var(--mono);font-size:11px;color:var(--muted2)}
+
+/* SIDEBAR */
+.sidebar{border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-section{padding:20px 16px 8px;font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:background 0.15s;font-size:13px;color:var(--muted2)}
+.sidebar-item:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.sidebar-item.active{background:rgba(0,229,160,0.06);color:var(--accent)}
+.sidebar-item .icon{width:16px;height:16px;opacity:0.7;flex-shrink:0}
+.sidebar-divider{height:1px;background:var(--border);margin:8px 0}
+.sidebar-stats{padding:12px 16px;display:flex;flex-direction:column;gap:8px;margin-top:auto;border-top:1px solid var(--border)}
+.stat-row{display:flex;justify-content:space-between;align-items:center}
+.stat-label{font-size:11px;color:var(--muted)}
+.stat-val{font-family:var(--mono);font-size:12px;color:var(--text)}
+.stat-val.green{color:var(--accent)}
+.stat-val.red{color:var(--accent3)}
+.stat-val.yellow{color:var(--accent4)}
+
+/* MAIN CHAT */
+.main{display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+.chat-area{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px;scroll-behavior:smooth}
+.chat-area::-webkit-scrollbar{width:4px}
+.chat-area::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);text-align:center;padding:40px}
+.empty-icon{width:48px;height:48px;border-radius:12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);display:flex;align-items:center;justify-content:center;font-size:22px}
+.empty-title{font-family:var(--display);font-size:18px;font-weight:700;color:var(--text)}
+.empty-desc{font-size:13px;max-width:320px;line-height:1.7}
+.quick-prompts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px}
+.qp{font-size:12px;padding:6px 14px;border:1px solid var(--border-hi);border-radius:20px;cursor:pointer;color:var(--muted2);background:transparent;transition:all 0.15s;font-family:var(--sans)}
+.qp:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,0.06)}
+
+/* MESSAGES */
+.msg{display:flex;gap:12px;align-items:flex-start;animation:fadeUp 0.3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-avatar{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.msg-avatar.user{background:rgba(79,142,255,0.15);border:1px solid rgba(79,142,255,0.25);color:var(--accent2);font-family:var(--mono);font-size:12px}
+.msg-avatar.agent{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);color:var(--accent)}
+.msg-body{flex:1;min-width:0}
+.msg-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:0.03em}
+.msg-text{font-size:14px;color:var(--text);line-height:1.7;background:var(--card);border:1px solid var(--border);border-radius:0 12px 12px 12px;padding:12px 16px}
+.msg.user .msg-text{background:rgba(79,142,255,0.07);border-color:rgba(79,142,255,0.15);border-radius:12px 0 12px 12px}
+
+/* AGENT RESPONSE CARD */
+.agent-card{background:var(--card);border:1px solid var(--border);border-radius:0 12px 12px 12px;overflow:hidden}
+.agent-card-header{padding:10px 14px;background:rgba(0,229,160,0.06);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.agent-card-title{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;color:var(--accent);text-transform:uppercase}
+.agent-card-badges{display:flex;gap:6px}
+.badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500}
+.badge.cat{background:rgba(79,142,255,0.12);color:var(--accent2);border:1px solid rgba(79,142,255,0.2)}
+.badge.urgency-critical{background:rgba(255,107,107,0.12);color:var(--accent3);border:1px solid rgba(255,107,107,0.2)}
+.badge.urgency-high{background:rgba(255,201,74,0.12);color:var(--accent4);border:1px solid rgba(255,201,74,0.2)}
+.badge.urgency-medium{background:rgba(79,142,255,0.12);color:var(--accent2);border:1px solid rgba(79,142,255,0.2)}
+.badge.urgency-low{background:rgba(107,114,128,0.12);color:var(--muted2);border:1px solid rgba(107,114,128,0.2)}
+.badge.sent-negative{background:rgba(255,107,107,0.1);color:var(--accent3)}
+.badge.sent-neutral{background:rgba(107,114,128,0.1);color:var(--muted2)}
+.badge.sent-positive{background:rgba(0,229,160,0.1);color:var(--accent)}
+.agent-card-body{padding:14px}
+.agent-section{margin-bottom:12px}
+.agent-section:last-child{margin-bottom:0}
+.agent-section-label{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.agent-section-content{font-size:13px;color:var(--muted2);line-height:1.65}
+.agent-section-content.primary{color:var(--text)}
+.actions-list{display:flex;flex-direction:column;gap:5px}
+.action-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted2)}
+.action-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.action-dot.done{background:var(--accent)}
+.action-dot.pending{background:var(--accent4)}
+.action-dot.escalated{background:var(--accent3)}
+.divider-line{height:1px;background:var(--border);margin:10px 0}
+.response-box{background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.12);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text);line-height:1.7}
+.next-steps-list{display:flex;flex-direction:column;gap:4px}
+.next-step{font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:7px}
+.next-step::before{content:'→';color:var(--accent);font-size:11px;flex-shrink:0}
+.risk-flag{display:flex;align-items:center;gap:8px;background:rgba(255,107,107,0.07);border:1px solid rgba(255,107,107,0.2);border-radius:6px;padding:7px 12px;margin-top:8px}
+.risk-flag-icon{font-size:13px}
+.risk-flag-text{font-size:12px;color:var(--accent3)}
+
+/* TYPING */
+.typing-indicator{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:0 12px 12px 12px}
+.typing-dots{display:flex;gap:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0.4;animation:blink 1.2s infinite}
+.dot:nth-child(2){animation-delay:0.2s}
+.dot:nth-child(3){animation-delay:0.4s}
+@keyframes blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}
+.typing-label{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* INPUT */
+.input-area{padding:16px 24px;border-top:1px solid var(--border);background:var(--surface)}
+.input-row{display:flex;gap:10px;align-items:flex-end}
+.input-wrap{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;display:flex;align-items:flex-end;gap:8px;padding:8px 14px;transition:border-color 0.2s}
+.input-wrap:focus-within{border-color:var(--accent)}
+.input-textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;max-height:120px;min-height:24px}
+.input-textarea::placeholder{color:var(--muted)}
+.send-btn{width:36px;height:36px;border-radius:8px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;color:#000}
+.send-btn:hover{opacity:0.85}
+.send-btn:disabled{opacity:0.3;cursor:not-allowed}
+.input-hint{font-size:11px;color:var(--muted);margin-top:8px;text-align:center;font-family:var(--mono)}
+
+/* RIGHT PANEL */
+.right-panel{border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.rp-header{padding:16px;border-bottom:1px solid var(--border);font-family:var(--display);font-size:13px;font-weight:700;color:var(--text)}
+.rp-body{flex:1;overflow-y:auto;padding:14px}
+.rp-body::-webkit-scrollbar{width:3px}
+.rp-body::-webkit-scrollbar-thumb{background:var(--border-hi)}
+.rp-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.rp-card-title{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric-box{background:var(--surface);border-radius:7px;padding:8px 10px;border:1px solid var(--border)}
+.metric-num{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);line-height:1}
+.metric-num.g{color:var(--accent)}
+.metric-num.r{color:var(--accent3)}
+.metric-num.y{color:var(--accent4)}
+.metric-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.queue-item{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.queue-item:last-child{border-bottom:none}
+.queue-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.queue-text{font-size:12px;color:var(--muted2);flex:1;min-width:0}
+.queue-text strong{color:var(--text);display:block;font-weight:500;font-size:12px}
+.queue-tag{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.api-section{padding:12px 14px;border-top:1px solid var(--border);margin-top:auto}
+.api-input-label{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.api-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none}
+.api-input:focus{border-color:var(--accent)}
+.api-input::placeholder{color:var(--muted)}
+.api-save-btn{margin-top:8px;width:100%;padding:7px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:7px;color:var(--accent);font-family:var(--mono);font-size:11px;cursor:pointer;transition:background 0.15s}
+.api-save-btn:hover{background:rgba(0,229,160,0.15)}
+.error-msg{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--accent3)}
+
+/* SCROLLBAR GLOBAL */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+
+/* RESPONSIVE */
+@media(max-width:900px){.right-panel{display:none}.shell{grid-template-columns:220px 1fr}}
+@media(max-width:600px){.sidebar{display:none}.shell{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">HR<span>Ops</span> Agent</div>
+    <div class="topbar-badge">AUTONOMOUS</div>
+    <div style="margin-left:16px;font-size:12px;color:var(--muted);font-family:var(--mono)">v1.0 · Claude-powered</div>
+    <div class="topbar-right">
+      <div class="status-dot"></div>
+      <div class="status-label">AGENT ONLINE</div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Navigation</div>
+    <div class="sidebar-item active">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>
+      Live Agent
+    </div>
+    <div class="sidebar-item">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 7h6M5 10h4"/></svg>
+      Case Log
+    </div>
+    <div class="sidebar-item">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2L2 5v4c0 3 2.5 5 6 6 3.5-1 6-3 6-6V5L8 2z"/></svg>
+      Risk Signals
+    </div>
+    <div class="sidebar-item">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3h3"/></svg>
+      Escalations
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">Categories</div>
+    <div class="sidebar-item">📋 Leave & Attendance</div>
+    <div class="sidebar-item">💰 Payroll</div>
+    <div class="sidebar-item">📜 Policy Queries</div>
+    <div class="sidebar-item">⚠️ Grievances</div>
+    <div class="sidebar-item">👔 Manager Escalations</div>
+    <div class="sidebar-stats">
+      <div class="stat-row"><span class="stat-label">Today's queries</span><span class="stat-val" id="totalCount">0</span></div>
+      <div class="stat-row"><span class="stat-label">Auto-resolved</span><span class="stat-val green" id="resolvedCount">0</span></div>
+      <div class="stat-row"><span class="stat-label">Escalated</span><span class="stat-val red" id="escalatedCount">0</span></div>
+      <div class="stat-row"><span class="stat-label">Avg response</span><span class="stat-val yellow" id="avgTime">—</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🤖</div>
+        <div class="empty-title">HR Operations Agent</div>
+        <div class="empty-desc">I autonomously classify, analyze, prioritize, and act on HR queries. Not a chatbot — an agent that decides and executes.</div>
+        <div class="quick-prompts">
+          <button class="qp" onclick="quickPrompt(this)">I haven't received my salary this month</button>
+          <button class="qp" onclick="quickPrompt(this)">How do I apply for parental leave?</button>
+          <button class="qp" onclick="quickPrompt(this)">My manager is treating me unfairly</button>
+          <button class="qp" onclick="quickPrompt(this)">I want to resign, nothing is working out</button>
+          <button class="qp" onclick="quickPrompt(this)">What is the work from home policy?</button>
+          <button class="qp" onclick="quickPrompt(this)">I've raised this issue 3 times and nothing has changed</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea class="input-textarea" id="inputBox" placeholder="Describe your HR concern..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8l12-6-6 12V9L2 8z" fill="currentColor"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">HR Agent · Powered by Claude · Add your API key in the panel →</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="rp-header">Agent Dashboard</div>
+    <div class="rp-body">
+      <div class="rp-card">
+        <div class="rp-card-title">Session Metrics</div>
+        <div class="metric-grid">
+          <div class="metric-box"><div class="metric-num g" id="m-resolved">0</div><div class="metric-lbl">Resolved</div></div>
+          <div class="metric-box"><div class="metric-num r" id="m-escalated">0</div><div class="metric-lbl">Escalated</div></div>
+          <div class="metric-box"><div class="metric-num y" id="m-critical">0</div><div class="metric-lbl">Critical</div></div>
+          <div class="metric-box"><div class="metric-num" id="m-total">0</div><div class="metric-lbl">Total</div></div>
+        </div>
+      </div>
+      <div class="rp-card">
+        <div class="rp-card-title">Active Queue</div>
+        <div id="queueList">
+          <div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">No active cases</div>
+        </div>
+      </div>
+      <div class="rp-card">
+        <div class="rp-card-title">Risk Signals</div>
+        <div id="riskList">
+          <div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">Monitoring...</div>
+        </div>
+      </div>
+    </div>
+    <div class="api-section">
+      <div class="api-input-label">
+        <span>ANTHROPIC API KEY</span>
+        <span id="keyStatus" style="color:var(--muted)">not set</span>
+      </div>
+      <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+      <button class="api-save-btn" onclick="saveKey()">Save Key & Activate Agent</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('hr_agent_key') || '';
+let sessionData = { total:0, resolved:0, escalated:0, critical:0, times:[], risks:[] };
+let caseQueue = [];
+let caseCounter = 1000;
+
+if(apiKey){
+  document.getElementById('apiKeyInput').value = apiKey;
+  document.getElementById('keyStatus').textContent = 'active';
+  document.getElementById('keyStatus').style.color = 'var(--accent)';
+}
+
+// ── SYSTEM PROMPT ──────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are an autonomous HR Operations Agent for a fast-scaling tech company (500–2000 employees). You are NOT a chatbot. You are an intelligent agent that reasons, decides, and executes actions autonomously.
+
+For EVERY employee message, you MUST analyze and respond with this EXACT JSON structure (respond with ONLY valid JSON, no markdown, no explanation):
+
+{
+  "category": "one of: Leave & Attendance | Payroll & Compensation | Policy Clarification | Employee Grievance | Manager Escalation | Mental Health & Wellbeing | Compliance & Legal | Offboarding | Other",
+  "sub_category": "specific sub-type",
+  "intent": "concise intent in 5-8 words",
+  "sentiment": "Positive | Neutral | Frustrated | Distressed | Angry | Anxious",
+  "sentiment_score": -1.0 to 1.0,
+  "urgency": "Critical | High | Medium | Low",
+  "priority": 1 to 5 (1=highest),
+  "risk_flags": ["array of detected risks: Flight Risk | Disengagement Signal | Repeated Complaint | Compliance Risk | Mental Health Concern | Potential Legal Issue"],
+  "reasoning": "Your internal agent reasoning — what you analyzed, what you considered, what you decided. 2-3 sentences.",
+  "decision": "Direct Resolution | Policy Lookup | Schedule HR Meeting | Escalate to HRBP | Escalate to Manager | Escalate to Legal | Trigger Payroll Review | Create Support Ticket | Immediate Intervention",
+  "actions_taken": [
+    {"action": "action name", "status": "Executed | Pending | Escalated", "detail": "what was done"}
+  ],
+  "response_to_employee": "Your empathetic, professional, direct response to the employee. Be specific — tell them exactly what is happening, what has been done, and what will happen next. 3-5 sentences.",
+  "next_steps": ["step 1", "step 2", "step 3"],
+  "case_id": "HR-XXXX format",
+  "estimated_resolution": "e.g. Within 24 hours | Within 2-3 business days | Immediate",
+  "summary": "One-line case summary for the HR dashboard"
+}
+
+DECISION RULES (apply strictly):
+- Sentiment Distressed/Angry + grievance → ALWAYS escalate to HRBP, do NOT just answer
+- Repeated complaint mentions → flag Repeated Complaint risk + escalate
+- Resignation mention → flag Flight Risk, schedule immediate HRBP meeting
+- Mental health concern → flag Mental Health Concern, recommend EAP, schedule counselor
+- Payroll issue → trigger Payroll Review action + give specific timeline
+- Policy question → resolve directly with policy detail
+- Compliance/legal language → escalate to Legal immediately
+- Critical priority = response within 4 hours, always schedule follow-up meeting
+- Generate realistic case IDs like HR-1042`;
+
+// ── KEY MANAGEMENT ─────────────────────────────────────────────────────────
+function saveKey(){
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if(!k.startsWith('sk-ant-') && !k.startsWith('sk-')){
+    alert('Please enter a valid Anthropic API key (starts with sk-ant-)');
+    return;
+  }
+  apiKey = k;
+  localStorage.setItem('hr_agent_key', k);
+  document.getElementById('keyStatus').textContent = 'active';
+  document.getElementById('keyStatus').style.color = 'var(--accent)';
+}
+
+// ── INPUT HELPERS ──────────────────────────────────────────────────────────
+function autoResize(el){
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+function handleKey(e){
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+}
+function quickPrompt(el){ document.getElementById('inputBox').value = el.textContent; sendMessage(); }
+
+// ── RENDER HELPERS ─────────────────────────────────────────────────────────
+function urgencyClass(u){
+  const m = {Critical:'urgency-critical',High:'urgency-high',Medium:'urgency-medium',Low:'urgency-low'};
+  return m[u] || 'urgency-low';
+}
+function sentClass(s){
+  if(['Distressed','Angry','Frustrated'].includes(s)) return 'sent-negative';
+  if(s === 'Positive') return 'sent-positive';
+  return 'sent-neutral';
+}
+function actionDotClass(status){
+  if(status === 'Executed') return 'done';
+  if(status === 'Escalated') return 'escalated';
+  return 'pending';
+}
+function ts(){
+  return new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+
+function appendUserMsg(text){
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.style.flexDirection = 'row-reverse';
+  div.innerHTML = `
+    <div class="msg-avatar user">ME</div>
+    <div class="msg-body" style="align-items:flex-end;display:flex;flex-direction:column">
+      <div class="msg-meta">${ts()}</div>
+      <div class="msg-text">${escHtml(text)}</div>
+    </div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function appendTyping(){
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.id = 'typingMsg';
+  div.innerHTML = `
+    <div class="msg-avatar agent">🤖</div>
+    <div class="msg-body">
+      <div class="msg-meta">Agent · reasoning...</div>
+      <div class="typing-indicator">
+        <div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="typing-label">Analyzing intent, sentiment, urgency...</div>
+      </div>
+    </div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function renderAgentCard(d){
+  const riskHtml = (d.risk_flags && d.risk_flags.length)
+    ? d.risk_flags.map(r => `<div class="risk-flag"><span class="risk-flag-icon">⚠️</span><span class="risk-flag-text">${r}</span></div>`).join('')
+    : '';
+  const actionsHtml = (d.actions_taken || []).map(a =>
+    `<div class="action-item"><div class="action-dot ${actionDotClass(a.status)}"></div><span><strong style="color:var(--text)">${a.action}</strong> — ${a.detail} <span style="font-size:10px;opacity:0.6">[${a.status}]</span></span></div>`
+  ).join('');
+  const nextHtml = (d.next_steps || []).map(s => `<div class="next-step">${escHtml(s)}</div>`).join('');
+
+  return `<div class="agent-card">
+    <div class="agent-card-header">
+      <div class="agent-card-title">🤖 Agent Response · ${d.case_id || 'HR-???'}</div>
+      <div class="agent-card-badges">
+        <span class="badge cat">${d.category || '—'}</span>
+        <span class="badge ${urgencyClass(d.urgency)}">${d.urgency || '—'}</span>
+        <span class="badge ${sentClass(d.sentiment)}">${d.sentiment || '—'}</span>
+      </div>
+    </div>
+    <div class="agent-card-body">
+      <div class="agent-section">
+        <div class="agent-section-label">Intent Detected</div>
+        <div class="agent-section-content primary">${escHtml(d.intent || '—')}</div>
+      </div>
+      <div class="agent-section">
+        <div class="agent-section-label">Agent Reasoning</div>
+        <div class="agent-section-content">${escHtml(d.reasoning || '—')}</div>
+      </div>
+      <div class="divider-line"></div>
+      <div class="agent-section">
+        <div class="agent-section-label">Decision → ${d.decision || '—'}</div>
+        <div class="actions-list">${actionsHtml || '<div class="action-item"><div class="action-dot done"></div><span>No additional actions required</span></div>'}</div>
+      </div>
+      ${riskHtml ? `<div class="divider-line"></div><div class="agent-section"><div class="agent-section-label">Risk Signals</div>${riskHtml}</div>` : ''}
+      <div class="divider-line"></div>
+      <div class="agent-section">
+        <div class="agent-section-label">Response to Employee</div>
+        <div class="response-box">${escHtml(d.response_to_employee || '—')}</div>
+      </div>
+      <div class="agent-section" style="margin-top:10px">
+        <div class="agent-section-label">Next Steps</div>
+        <div class="next-steps-list">${nextHtml}</div>
+      </div>
+      <div class="divider-line"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">EST. RESOLUTION: ${d.estimated_resolution || '—'}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">PRIORITY ${d.priority || '—'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function appendAgentMsg(d){
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="msg-avatar agent">🤖</div>
+    <div class="msg-body">
+      <div class="msg-meta">HR Agent · ${ts()} · ${d.sub_category || ''}</div>
+      ${renderAgentCard(d)}
+    </div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function appendError(msg){
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="msg-avatar agent">🤖</div>
+    <div class="msg-body">
+      <div class="msg-meta">Agent · ${ts()}</div>
+      <div class="error-msg">⚠️ ${escHtml(msg)}</div>
+    </div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── UPDATE DASHBOARD ───────────────────────────────────────────────────────
+function updateDashboard(d, elapsed){
+  sessionData.total++;
+  sessionData.times.push(elapsed);
+  if(d.urgency === 'Critical') sessionData.critical++;
+  const escalated = (d.decision||'').toLowerCase().includes('escalat');
+  if(escalated) sessionData.escalated++;
+  else sessionData.resolved++;
+
+  document.getElementById('totalCount').textContent = sessionData.total;
+  document.getElementById('resolvedCount').textContent = sessionData.resolved;
+  document.getElementById('escalatedCount').textContent = sessionData.escalated;
+  const avg = sessionData.times.reduce((a,b)=>a+b,0)/sessionData.times.length;
+  document.getElementById('avgTime').textContent = avg.toFixed(1)+'s';
+  document.getElementById('m-resolved').textContent = sessionData.resolved;
+  document.getElementById('m-escalated').textContent = sessionData.escalated;
+  document.getElementById('m-critical').textContent = sessionData.critical;
+  document.getElementById('m-total').textContent = sessionData.total;
+
+  // Queue
+  caseCounter++;
+  const qItem = { id: d.case_id || `HR-${caseCounter}`, summary: d.summary || d.intent, urgency: d.urgency, category: d.category };
+  caseQueue.unshift(qItem);
+  if(caseQueue.length > 5) caseQueue = caseQueue.slice(0,5);
+  const dotColors = {Critical:'var(--accent3)',High:'var(--accent4)',Medium:'var(--accent2)',Low:'var(--muted)'};
+  document.getElementById('queueList').innerHTML = caseQueue.map(c =>
+    `<div class="queue-item"><div class="queue-dot" style="background:${dotColors[c.urgency]||'var(--muted)'}"></div>
+    <div class="queue-text"><strong>${c.id}</strong>${c.summary}<div class="queue-tag">${c.category}</div></div></div>`
+  ).join('');
+
+  // Risks
+  if(d.risk_flags && d.risk_flags.length){
+    sessionData.risks.unshift(...d.risk_flags.map(r => ({risk:r, caseId: d.case_id})));
+    if(sessionData.risks.length > 6) sessionData.risks = sessionData.risks.slice(0,6);
+    document.getElementById('riskList').innerHTML = sessionData.risks.map(r =>
+      `<div style="font-size:12px;color:var(--accent3);padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between"><span>⚠ ${r.risk}</span><span style="color:var(--muted);font-family:var(--mono);font-size:10px">${r.caseId}</span></div>`
+    ).join('');
+  }
+}
+
+// ── MAIN SEND ──────────────────────────────────────────────────────────────
+async function sendMessage(){
+  const box = document.getElementById('inputBox');
+  const text = box.value.trim();
+  if(!text) return;
+  if(!apiKey){ alert('Please add your Anthropic API key in the right panel first.'); return; }
+
+  // Hide empty state
+  const es = document.getElementById('emptyState');
+  if(es) es.remove();
+
+  box.value = '';
+  box.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+
+  appendUserMsg(text);
+  const typingEl = appendTyping();
+  const t0 = Date.now();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: text }]
+      })
+    });
+
+    if(!res.ok){
+      const err = await res.json();
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const raw = data.content[0]?.text || '';
+    const elapsed = ((Date.now() - t0)/1000).toFixed(1);
+    typingEl.remove();
+
+    let parsed;
+    try {
+      // Strip possible markdown fences
+      const clean = raw.replace(/```json|```/g,'').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      appendError('Agent returned malformed response. Raw: ' + raw.slice(0,200));
+      document.getElementById('sendBtn').disabled = false;
+      return;
+    }
+
+    appendAgentMsg(parsed);
+    updateDashboard(parsed, parseFloat(elapsed));
+
+  } catch(err){
+    typingEl.remove();
+    appendError(err.message || 'Network error. Check your API key and connection.');
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('inputBox').focus();
+}
+</script>
+</body>
+</html>
